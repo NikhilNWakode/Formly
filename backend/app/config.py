@@ -2,6 +2,7 @@
 
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +26,11 @@ class Settings(BaseSettings):
     # Optional. Anonymous access to ZeroGPU Spaces works but is rate limited per
     # IP; a free read token raises the quota and makes generation far more
     # reliable. Never sent to the browser.
-    hf_token: str | None = None
+    #
+    # repr=False keeps it out of Settings' repr, so it cannot leak into a
+    # traceback, a log line or a test failure -- which is exactly how it
+    # surfaced before this was set.
+    hf_token: str | None = Field(default=None, repr=False)
 
     # Shap-E sampling parameters. 64 steps is the Space default and the quality
     # knee; higher values cost latency without much visible gain.
@@ -82,6 +87,15 @@ class Settings(BaseSettings):
     # Comma-separated exact origins. Falls back to localhost for development.
     # In production set CORS_ORIGINS to the deployed frontend URL.
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    # Optional regex for origins that cannot be enumerated ahead of time.
+    # Vercel mints a new hashed subdomain per deployment
+    # (project-<hash>-<team>.vercel.app), so an exact list breaks on every
+    # redeploy. Keep the pattern scoped to your own project rather than all of
+    # *.vercel.app, which would let any site hosted there call this API.
+    #
+    #   CORS_ORIGIN_REGEX=https://myproject(-[a-z0-9-]+)?\.vercel\.app
+    cors_origin_regex: str | None = None
 
     # Simple in-process abuse guard: max generations per client IP per window.
     rate_limit_requests: int = 10

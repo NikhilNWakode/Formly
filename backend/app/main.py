@@ -64,10 +64,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Exact origins only -- no wildcard, since the frontend URL is known.
+    # Exact origins, plus an optional scoped regex for hosts whose subdomain
+    # is generated per deployment. Never a wildcard.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        allow_origin_regex=settings.cors_origin_regex,
         allow_credentials=False,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type"],

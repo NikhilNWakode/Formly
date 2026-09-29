@@ -457,3 +457,67 @@ def test_generate_request_schema_exposes_only_prompt():
     from app.schemas.generation import GenerateRequest
 
     assert set(GenerateRequest.model_fields) == {"prompt"}
+
+
+# --- CORS origin matching ---------------------------------------------------
+
+
+def test_cors_allows_origins_matching_the_configured_regex(monkeypatch):
+    """Vercel mints a new subdomain per deployment, so exact lists break.
+
+    The regex must cover the production alias and preview deployments of the
+    same project, and nothing else.
+
+    CORS is configured inside create_app() from the cached settings, so the
+    environment has to be set before the app is built -- overriding the
+    dependency afterwards is too late.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.config import get_settings
+    from app.main import create_app
+
+    monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000")
+    monkeypatch.setenv(
+        "CORS_ORIGIN_REGEX", r"https://frontend-lefw(-[a-z0-9-]+)?\.vercel\.app"
+    )
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as api:
+            allowed = [
+                "https://frontend-lefw.vercel.app",
+                "https://frontend-lefw-g64u0wbbt-nikhil-wakodes-projects.vercel.app",
+                "http://localhost:3000",
+            ]
+            for origin in allowed:
+                r = api.options(
+                    "/api/generate",
+                    headers={
+                        "Origin": origin,
+                        "Access-Control-Request-Method": "POST",
+                    },
+                )
+                assert r.headers.get("access-control-allow-origin") == origin, origin
+
+            # Another project on the same platform must NOT be allowed.
+            for origin in [
+                "https://someone-elses-app.vercel.app",
+                "https://evil.example.com",
+            ]:
+                r = api.options(
+                    "/api/generate",
+                    headers={
+                        "Origin": origin,
+                        "Access-Control-Request-Method": "POST",
+                    },
+                )
+                assert r.headers.get("access-control-allow-origin") is None, origin
+    finally:
+        get_settings.cache_clear()
+
+
+def test_cors_regex_is_off_by_default():
+    """Without explicit configuration only the exact list applies."""
+    from app.config import Settings
+
+    assert Settings().cors_origin_regex is None

@@ -22,6 +22,12 @@ services:
       # Must be the exact deployed frontend origin.
       - key: CORS_ORIGINS
         sync: false
+      # Optional. Vercel gives every deployment its own hashed subdomain, so an
+      # exact list breaks on each redeploy. Scope this to your own project --
+      # not all of *.vercel.app.
+      #   https://myproject(-[a-z0-9-]+)?\.vercel\.app
+      - key: CORS_ORIGIN_REGEX
+        sync: false
       - key: PROVIDER
         value: shap-e
       - key: HF_SPACE
