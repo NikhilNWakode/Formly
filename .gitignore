@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Build output
+.next/
+out/
+dist/
+build/
+*.egg-info/
+
+# Environment / secrets
+.env
+.env.local
+.env*.local
+!.env.example
+
+# Test + tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+.coverage
+htmlcov/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Generated assets are transient and must never be committed
+*.glb
+# ...except the curated demo assets, which are part of the deployed app.
+# Without this exception the examples would be silently missing in production.
+!frontend/public/examples/*.glb
+
+# TypeScript incremental build info
+*.tsbuildinfo
+next-env.d.ts

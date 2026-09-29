@@ -1,0 +1,28 @@
+# Render blueprint for the Formly backend (free tier).
+#
+# Note on the free plan: the instance sleeps after ~15 minutes of inactivity,
+# so the first request after idling pays a cold start. That is on top of the
+# Hugging Face Space's own cold start, which the provider already retries
+# through. Both are documented in the README.
+services:
+  - type: web
+    name: formly-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      # Set in the Render dashboard, not here.
+      - key: HF_TOKEN
+        sync: false
+      # Must be the exact deployed frontend origin.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PROVIDER
+        value: shap-e
+      - key: HF_SPACE
+        value: hysts/Shap-E
