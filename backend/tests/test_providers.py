@@ -521,3 +521,48 @@ def test_cors_regex_is_off_by_default():
     from app.config import Settings
 
     assert Settings().cors_origin_regex is None
+
+
+def test_cors_origins_tolerate_trailing_slashes():
+    """A URL copied from the address bar keeps its trailing slash.
+
+    The Origin header never has one, so an unnormalised entry matches nothing
+    and shows up only as a browser CORS error -- a costly thing to debug.
+    """
+    from app.config import Settings
+
+    settings = Settings(
+        cors_origins="https://a.vercel.app/,https://b.vercel.app/ , https://c.vercel.app"
+    )
+    assert settings.cors_origin_list == [
+        "https://a.vercel.app",
+        "https://b.vercel.app",
+        "https://c.vercel.app",
+    ]
+
+
+def test_cors_accepts_origins_configured_with_a_trailing_slash(monkeypatch):
+    """End to end: a slashed config value must still allow the real origin."""
+    from fastapi.testclient import TestClient
+
+    from app.config import get_settings
+    from app.main import create_app
+
+    monkeypatch.setenv("CORS_ORIGINS", "https://frontend-lefw.vercel.app/")
+    monkeypatch.delenv("CORS_ORIGIN_REGEX", raising=False)
+    get_settings.cache_clear()
+    try:
+        with TestClient(create_app()) as api:
+            r = api.options(
+                "/api/generate",
+                headers={
+                    "Origin": "https://frontend-lefw.vercel.app",
+                    "Access-Control-Request-Method": "POST",
+                },
+            )
+            assert (
+                r.headers.get("access-control-allow-origin")
+                == "https://frontend-lefw.vercel.app"
+            )
+    finally:
+        get_settings.cache_clear()

@@ -103,7 +103,14 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+        """Configured origins, normalised for comparison against the Origin header.
+
+        Trailing slashes are stripped because a browser never sends one: the
+        Origin header is scheme + host + port only. Pasting a URL straight from
+        the address bar yields "https://site.app/", which would silently match
+        nothing and surface only as a CORS failure in the browser console.
+        """
+        return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache
